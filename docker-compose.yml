@@ -40,6 +40,32 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build:
+      context: ./api
+    container_name: zzl-api
+    restart: unless-stopped
+    environment:
+      API_APP_NAME: ${API_APP_NAME:-ZZLAgent API}
+      API_ENV: ${API_ENV:-development}
+      API_VERSION: ${API_VERSION:-0.1.0}
+      API_PREFIX: ${API_PREFIX:-/api}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - zzl-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/status').read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:
