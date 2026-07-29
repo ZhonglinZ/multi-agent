@@ -50,6 +50,11 @@ services:
       API_ENV: ${API_ENV:-development}
       API_VERSION: ${API_VERSION:-0.1.0}
       API_PREFIX: ${API_PREFIX:-/api}
+            LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}
+      CORS_ALLOW_METHODS: ${CORS_ALLOW_METHODS:-["*"]}
+      CORS_ALLOW_HEADERS: ${CORS_ALLOW_HEADERS:-["*"]}
     ports:
       - "${API_PORT:-8000}:8000"
     networks:
