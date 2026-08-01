@@ -71,6 +71,23 @@ services:
       timeout: 5s
       retries: 5
 
+  ui:
+    build:
+      context: ./ui
+      args:
+        API_PROXY_URL: ${UI_API_PROXY_URL:-http://api:8000/api/:path*}
+    container_name: zzl-ui
+    restart: unless-stopped
+    environment:
+      API_PROXY_URL: ${UI_API_PROXY_URL:-http://api:8000/api/:path*}
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    networks:
+      - zzl-network
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   redis_data:
