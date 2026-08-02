@@ -46,7 +46,7 @@ services:
     container_name: zzl-api
     restart: unless-stopped
     environment:
-      API_APP_NAME: ${API_APP_NAME:-ZZLAgent API}
+      API_APP_NAME: ${API_APP_NAME:-ZZLAgents API}
       API_ENV: ${API_ENV:-development}
       API_VERSION: ${API_VERSION:-0.1.0}
       API_PREFIX: ${API_PREFIX:-/api}
@@ -55,6 +55,8 @@ services:
       CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}
       CORS_ALLOW_METHODS: ${CORS_ALLOW_METHODS:-["*"]}
       CORS_ALLOW_HEADERS: ${CORS_ALLOW_HEADERS:-["*"]}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/zzl_agents}
+      DATABASE_ECHO: ${DATABASE_ECHO:-false}
     ports:
       - "${API_PORT:-8000}:8000"
     expose:

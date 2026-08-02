@@ -22,6 +22,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+    database_url: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/zzl_agents"
+    )
+
+    database_echo: bool = False
 
 
 @lru_cache
