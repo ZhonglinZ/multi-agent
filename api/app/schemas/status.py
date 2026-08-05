@@ -6,3 +6,7 @@ class StatusData(BaseModel):
     environment: str
     status: str
     version: str
+
+
+class DatabaseStatusData(BaseModel):
+    status: str
