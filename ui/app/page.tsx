@@ -26,7 +26,7 @@ export default function Home() {
 
     async function loadStatus() {
       try {
-        const response = await fetch("/api/status");
+        const response = await fetch("/api/status/database");
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
@@ -58,8 +58,6 @@ export default function Home() {
       <h1>Status</h1>
       <p>{status.type}</p>
       <p>{status.message}</p>
-      <p>{status.data?.service}</p>
-      <p>{status.data?.environment}</p>
       <p>{status.data?.status}</p>
     </div>
   );
