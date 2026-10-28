@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.app.infrastructure.database.health import check_database
-from api.app.infrastructure.database.session import get_db_session
+from app.infrastructure.database.health import check_database
+from app.infrastructure.database.session import get_db_session
 from app.core.config import settings
 from app.schemas.common import ApiResponse
 from app.schemas.status import DatabaseStatusData, StatusData
