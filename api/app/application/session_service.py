@@ -2,7 +2,12 @@ from uuid import UUID
 
 from app.application.unit_of_work import UnitOfWork
 from app.core.exceptions import AppException
-from app.domain.sessions.entities import Session
+from app.domain.sessions.entities import (
+    Session,
+    SessionEvent,
+    SessionEventType,
+    SessionMessage,
+)
 
 
 class SessionService:
@@ -34,3 +39,32 @@ class SessionService:
 
         await self.uow.sessions.soft_delete(session_id)
         await self.uow.commit()
+
+    async def create_user_message(
+        self, session_id: UUID, content: str
+    ) -> tuple[SessionMessage, SessionEvent]:
+        session = await self.uow.sessions.get(session_id)
+        clean_content = content.strip()
+        if not clean_content:
+            raise AppException(
+                message="message content is required",
+                code=400,
+                status_code=400,
+            )
+        message = await self.uow.session_messages.add_user_message(
+            session_id=session_id,
+            content=clean_content,
+        )
+
+        event = await self.uow.session_events.add(
+            session_id=session_id,
+            event_type=SessionEventType.message_created,
+            payload={
+                "message_id": str(message.id),
+                "role": message.role.value,
+                "content": message.content,
+            },
+        )
+        await self.uow.sessions.touch(session_id)
+        await self.uow.commit()
+        return message, event
