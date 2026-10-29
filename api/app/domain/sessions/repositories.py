@@ -1,6 +1,6 @@
 from typing import Protocol
 from uuid import UUID
-from api.app.domain.sessions.entities import Session
+from app.domain.sessions.entities import Session
 
 
 class SessionRepository(Protocol):
