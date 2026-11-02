@@ -11,8 +11,10 @@ from app.schemas.common import ApiResponse
 from app.schemas.session import (
     MessageCreateRequest,
     MessageCreateResponse,
+    MessageListResponse,
     MessageResponse,
     SessionCreateRequest,
+    SessionEventListResponse,
     SessionEventResponse,
     SessionListResponse,
     SessionResponse,
@@ -68,6 +70,22 @@ async def delete_session(
     return Response(status_code=204)
 
 
+@router.get(
+    "/{session_id}/messages",
+    response_model=ApiResponse[MessageListResponse],
+)
+async def list_messages(
+    session_id: UUID,
+    service: SessionService = Depends(build_session_service),
+) -> ApiResponse[MessageListResponse]:
+    messages = await service.list_messages(session_id)
+    return ApiResponse(
+        data=MessageListResponse(
+            items=[to_message_response(message) for message in messages],
+        )
+    )
+
+
 @router.post(
     "/{session_id}/messages",
     response_model=ApiResponse[MessageCreateResponse],
@@ -85,6 +103,22 @@ async def create_message(
         data=MessageCreateResponse(
             message=to_message_response(message),
             event=to_event_response(event),
+        )
+    )
+
+
+@router.get(
+    "/{session_id}/events",
+    response_model=ApiResponse[SessionEventListResponse],
+)
+async def list_events(
+    session_id: UUID,
+    service: SessionService = Depends(build_session_service),
+) -> ApiResponse[SessionEventListResponse]:
+    events = await service.list_events(session_id)
+    return ApiResponse(
+        data=SessionEventListResponse(
+            items=[to_event_response(event) for event in events],
         )
     )
 

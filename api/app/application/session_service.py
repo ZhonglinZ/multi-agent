@@ -40,10 +40,28 @@ class SessionService:
         await self.uow.sessions.soft_delete(session_id)
         await self.uow.commit()
 
+    async def _require_session(self, session_id: UUID) -> Session:
+        session = await self.uow.sessions.get(session_id)
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
+        return session
+
+    async def list_messages(self, session_id: UUID) -> list[SessionMessage]:
+        await self._require_session(session_id)
+        return await self.uow.session_messages.list_by_session(session_id)
+
+    async def list_events(self, session_id: UUID) -> list[SessionEvent]:
+        await self._require_session(session_id)
+        return await self.uow.session_events.list_by_session(session_id)
+
     async def create_user_message(
         self, session_id: UUID, content: str
     ) -> tuple[SessionMessage, SessionEvent]:
-        session = await self.uow.sessions.get(session_id)
+        await self._require_session(session_id)
         clean_content = content.strip()
         if not clean_content:
             raise AppException(

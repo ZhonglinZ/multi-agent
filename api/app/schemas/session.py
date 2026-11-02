@@ -44,3 +44,11 @@ class SessionEventResponse(BaseModel):
 class MessageCreateResponse(BaseModel):
     message: MessageResponse
     event: SessionEventResponse
+
+
+class MessageListResponse(BaseModel):
+    items: list[MessageResponse]
+
+
+class SessionEventListResponse(BaseModel):
+    items: list[SessionEventResponse]

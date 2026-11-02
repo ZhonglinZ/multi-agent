@@ -24,6 +24,35 @@ export type SessionListData = {
   items: SessionItem[];
 };
 
+export type ChatMessage = {
+  id: string;
+  session_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  created_at: string;
+};
+
+export type MessageListData = {
+  items: ChatMessage[];
+};
+
+export type SessionEventItem = {
+  id: string;
+  session_id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
+export type SessionEventListData = {
+  items: SessionEventItem[];
+};
+
+export type MessageCreateData = {
+  message: ChatMessage;
+  event: SessionEventItem;
+};
+
 export type ApiResponse<T> = {
   code: number;
   message: string;
