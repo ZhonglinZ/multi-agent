@@ -69,3 +69,8 @@ export type StatusBadgeView = {
   className: string;
   icon: LucideIcon;
 };
+
+export type StreamEvent = {
+  event: string;
+  data: Record<string, unknown>;
+};

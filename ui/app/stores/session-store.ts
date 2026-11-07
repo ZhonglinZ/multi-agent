@@ -6,13 +6,14 @@ import {
   fetchEvents,
   fetchMessages,
   fetchSessions,
-  sendMessage,
+  streamMessage,
 } from "../lib/session-api";
 import type {
   ChatMessage,
   LoadState,
   SessionEventItem,
   SessionItem,
+  StreamEvent,
 } from "../types";
 
 type SessionState = {
@@ -38,6 +39,26 @@ type SessionActions = {
   setDraft: (draft: string) => void;
   setTitle: (title: string) => void;
 };
+
+function toSessionEventItem(event: StreamEvent): SessionEventItem | null {
+  if (event.event !== "message_created") {
+    return null;
+  }
+  const data = event.data as Partial<SessionEventItem>;
+  if (!data.id || !data.session_id || !data.type || !data.created_at) {
+    return null;
+  }
+  return {
+    id: String(data.id),
+    session_id: String(data.session_id),
+    type: String(data.type),
+    payload:
+      typeof data.payload === "object" && data.payload !== null
+        ? (data.payload as Record<string, unknown>)
+        : {},
+    created_at: String(data.created_at),
+  };
+}
 
 const initialDetailState = {
   messages: { type: "ready", data: [] } as LoadState<ChatMessage[]>,
@@ -165,7 +186,22 @@ export const useSessionStore = create<SessionState & SessionActions>(
 
       set({ actionError: null, sendingMessage: true });
       try {
-        await sendMessage(sessionId, content);
+        await streamMessage(sessionId, content, (event) => {
+          const sessionEvent = toSessionEventItem(event);
+          if (!sessionEvent) {
+            return;
+          }
+          set((state) => {
+            const currentEvents =
+              state.events.type === "ready" ? state.events.data : [];
+            return {
+              events: {
+                type: "ready",
+                data: [...currentEvents, sessionEvent],
+              },
+            };
+          });
+        });
         set({ draft: "" });
         await Promise.all([
           get().loadSessionDetail(sessionId),

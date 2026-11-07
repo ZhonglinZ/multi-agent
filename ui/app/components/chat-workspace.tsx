@@ -29,7 +29,7 @@ export function ChatWorkspace({
 }: ChatWorkspaceProps) {
   return (
     <section className="grid grid-cols-[1fr_280px] gap-5 max-xl:grid-cols-1">
-      <div className="flex min-h-[560px] flex-col overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+      <div className="flex min-h-140 flex-col overflow-hidden rounded-md border border-slate-200 bg-slate-50">
         <MessageTimeline state={messages} />
         <div className="mt-auto">
           <ChatInput

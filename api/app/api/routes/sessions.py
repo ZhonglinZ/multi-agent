@@ -20,6 +20,12 @@ from app.schemas.session import (
     SessionResponse,
 )
 
+from asyncio import sleep
+
+from fastapi.responses import StreamingResponse
+
+from app.api.sse import encode_sse
+
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
@@ -140,4 +146,39 @@ def to_event_response(event: SessionEvent) -> SessionEventResponse:
         type=event.type.value,
         payload=event.payload,
         created_at=event.created_at,
+    )
+
+
+@router.post("/{session_id}/messages/stream")
+async def stream_message(
+    session_id: UUID,
+    payload: MessageCreateRequest,
+    service: SessionService = Depends(build_session_service),
+) -> StreamingResponse:
+    message, event = await service.create_user_message(
+        session_id=session_id,
+        content=payload.content,
+    )
+    message_data = to_message_response(message).model_dump(mode="json")
+    event_data = to_event_response(event).model_dump(mode="json")
+
+    async def event_stream():
+        yield encode_sse("message_created", event_data)
+        await sleep(0.2)
+        yield encode_sse(
+            "stream_done",
+            {
+                "session_id": str(session_id),
+                "message": message_data,
+            },
+        )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

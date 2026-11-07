@@ -7,7 +7,9 @@ import type {
   SessionEventListData,
   SessionItem,
   SessionListData,
+  StreamEvent,
 } from "../types";
+import { readSseStream } from "./sse";
 
 export function fetchSessions(): Promise<SessionItem[]> {
   return requestApi<SessionListData>("/api/sessions").then(
@@ -46,4 +48,25 @@ export function sendMessage(
     method: "POST",
     body: JSON.stringify({ content }),
   });
+}
+
+export async function streamMessage(
+  sessionId: string,
+  content: string,
+  onEvent: (event: StreamEvent) => void,
+) {
+  const response = await fetch(`/api/sessions/${sessionId}/messages/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({ content }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  await readSseStream(response, onEvent);
 }
