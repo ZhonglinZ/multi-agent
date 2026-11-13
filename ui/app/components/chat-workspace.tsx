@@ -7,6 +7,7 @@ import type {
   SessionEventItem,
   SessionItem,
 } from "../types";
+import { SessionControlBar } from "./session-control-bar";
 
 type ChatWorkspaceProps = {
   draft: string;
@@ -16,6 +17,10 @@ type ChatWorkspaceProps = {
   onSend: () => void;
   selectedSession: SessionItem | null;
   sending: boolean;
+  clearingUnread: boolean;
+  onClearUnread: () => void;
+  onStop: () => void;
+  stopping: boolean;
 };
 
 export function ChatWorkspace({
@@ -26,10 +31,21 @@ export function ChatWorkspace({
   onSend,
   selectedSession,
   sending,
+  clearingUnread,
+  onClearUnread,
+  onStop,
+  stopping,
 }: ChatWorkspaceProps) {
   return (
     <section className="grid grid-cols-[1fr_280px] gap-5 max-xl:grid-cols-1">
       <div className="flex min-h-140 flex-col overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+        <SessionControlBar
+          clearingUnread={clearingUnread}
+          onClearUnread={onClearUnread}
+          onStop={onStop}
+          selectedSession={selectedSession}
+          stopping={stopping}
+        />
         <MessageTimeline state={messages} />
         <div className="mt-auto">
           <ChatInput
@@ -45,6 +61,7 @@ export function ChatWorkspace({
       <aside className="rounded-md border border-slate-200 bg-white p-5">
         <h2 className="text-base font-semibold text-slate-950">事件记录</h2>
         <p className="mt-1 text-sm text-slate-500">本章先展示消息创建事件</p>
+
         <div className="mt-4">
           <EventTimeline state={events} />
         </div>

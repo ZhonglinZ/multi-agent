@@ -1,12 +1,14 @@
 import { create } from "zustand";
 
 import {
+  clearUnread,
   createSession,
   deleteSession,
   fetchEvents,
   fetchMessages,
   fetchSessions,
   streamMessage,
+  stopSession,
 } from "../lib/session-api";
 import type {
   ChatMessage,
@@ -22,8 +24,10 @@ type SessionState = {
   events: LoadState<SessionEventItem[]>;
   messages: LoadState<ChatMessage[]>;
   selectedSessionId: string | null;
+  clearingUnread: boolean;
   sendingMessage: boolean;
   sessions: LoadState<SessionItem[]>;
+  stoppingSession: boolean;
   submitting: boolean;
   title: string;
 };
@@ -33,32 +37,14 @@ type SessionActions = {
   deleteSession: (sessionId: string) => Promise<void>;
   loadSessionDetail: (sessionId: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
+  clearUnread: () => Promise<void>;
   selectSession: (sessionId: string | null) => void;
   sendMessage: () => Promise<void>;
+  stopSession: () => Promise<void>;
   setActionError: (message: string | null) => void;
   setDraft: (draft: string) => void;
   setTitle: (title: string) => void;
 };
-
-function toSessionEventItem(event: StreamEvent): SessionEventItem | null {
-  if (event.event !== "message_created") {
-    return null;
-  }
-  const data = event.data as Partial<SessionEventItem>;
-  if (!data.id || !data.session_id || !data.type || !data.created_at) {
-    return null;
-  }
-  return {
-    id: String(data.id),
-    session_id: String(data.session_id),
-    type: String(data.type),
-    payload:
-      typeof data.payload === "object" && data.payload !== null
-        ? (data.payload as Record<string, unknown>)
-        : {},
-    created_at: String(data.created_at),
-  };
-}
 
 const initialDetailState = {
   messages: { type: "ready", data: [] } as LoadState<ChatMessage[]>,
@@ -69,15 +55,83 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "unknown error";
 }
 
+function updateSession(items: SessionItem[], nextSession: SessionItem) {
+  return items.map((item) => (item.id === nextSession.id ? nextSession : item));
+}
+
+function toSessionEventItem(event: StreamEvent): SessionEventItem | null {
+  if (event.event === "session_status") {
+    const data = event.data as Partial<SessionItem>;
+    if (!data.id || !data.status || !data.updated_at) {
+      return null;
+    }
+    return {
+      id: `${data.id}-${data.status}-${Date.now()}`,
+      session_id: String(data.id),
+      type: `session_status:${data.status}`,
+      payload: {
+        status: data.status,
+      },
+      created_at: String(data.updated_at),
+    };
+  }
+
+  if (event.event === "message_created") {
+    const data = event.data as Partial<SessionEventItem>;
+    if (!data.id || !data.session_id || !data.type || !data.created_at) {
+      return null;
+    }
+    return {
+      id: String(data.id),
+      session_id: String(data.session_id),
+      type: String(data.type),
+      payload:
+        typeof data.payload === "object" && data.payload !== null
+          ? (data.payload as Record<string, unknown>)
+          : {},
+      created_at: String(data.created_at),
+    };
+  }
+
+  return null;
+}
+
+function toSessionItem(event: StreamEvent): SessionItem | null {
+  if (event.event !== "session_status") {
+    return null;
+  }
+  const data = event.data as Partial<SessionItem>;
+  if (
+    !data.id ||
+    !data.title ||
+    !data.status ||
+    !data.created_at ||
+    !data.updated_at ||
+    data.unread_count === undefined
+  ) {
+    return null;
+  }
+  return {
+    id: String(data.id),
+    title: String(data.title),
+    status: String(data.status),
+    unread_count: Number(data.unread_count),
+    created_at: String(data.created_at),
+    updated_at: String(data.updated_at),
+  };
+}
+
 export const useSessionStore = create<SessionState & SessionActions>(
   (set, get) => ({
     actionError: null,
+    clearingUnread: false,
     draft: "",
     events: initialDetailState.events,
     messages: initialDetailState.messages,
     selectedSessionId: null,
     sendingMessage: false,
     sessions: { type: "loading" },
+    stoppingSession: false,
     submitting: false,
     title: "",
 
@@ -172,6 +226,58 @@ export const useSessionStore = create<SessionState & SessionActions>(
       }
     },
 
+    stopSession: async () => {
+      const sessionId = get().selectedSessionId;
+      if (!sessionId) {
+        set({ actionError: "请先选择一个会话" });
+        return;
+      }
+
+      set({ actionError: null, stoppingSession: true });
+      try {
+        const session = await stopSession(sessionId);
+        set((state) => ({
+          sessions:
+            state.sessions.type === "ready"
+              ? {
+                  type: "ready",
+                  data: updateSession(state.sessions.data, session),
+                }
+              : state.sessions,
+        }));
+      } catch (error) {
+        set({ actionError: getErrorMessage(error) });
+      } finally {
+        set({ stoppingSession: false });
+      }
+    },
+
+    clearUnread: async () => {
+      const sessionId = get().selectedSessionId;
+      if (!sessionId) {
+        set({ actionError: "请先选择一个会话" });
+        return;
+      }
+
+      set({ actionError: null, clearingUnread: true });
+      try {
+        const session = await clearUnread(sessionId);
+        set((state) => ({
+          sessions:
+            state.sessions.type === "ready"
+              ? {
+                  type: "ready",
+                  data: updateSession(state.sessions.data, session),
+                }
+              : state.sessions,
+        }));
+      } catch (error) {
+        set({ actionError: getErrorMessage(error) });
+      } finally {
+        set({ clearingUnread: false });
+      }
+    },
+
     sendMessage: async () => {
       const sessionId = get().selectedSessionId;
       const content = get().draft.trim();
@@ -187,6 +293,19 @@ export const useSessionStore = create<SessionState & SessionActions>(
       set({ actionError: null, sendingMessage: true });
       try {
         await streamMessage(sessionId, content, (event) => {
+          const session = toSessionItem(event);
+          if (session) {
+            set((state) => ({
+              sessions:
+                state.sessions.type === "ready"
+                  ? {
+                      type: "ready",
+                      data: updateSession(state.sessions.data, session),
+                    }
+                  : state.sessions,
+            }));
+          }
+
           const sessionEvent = toSessionEventItem(event);
           if (!sessionEvent) {
             return;

@@ -104,13 +104,17 @@ export default function Home() {
             </section>
 
             <ChatWorkspace
+              clearingUnread={workspace.clearingUnread}
               draft={workspace.draft}
               events={workspace.events}
               messages={workspace.messages}
+              onClearUnread={workspace.clearUnread}
               onDraftChange={workspace.setDraft}
               onSend={workspace.sendMessage}
+              onStop={workspace.stopSession}
               selectedSession={workspace.selectedSession}
               sending={workspace.sendingMessage}
+              stopping={workspace.stoppingSession}
             />
           </div>
         </section>

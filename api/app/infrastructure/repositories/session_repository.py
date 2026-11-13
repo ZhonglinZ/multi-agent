@@ -66,6 +66,38 @@ class SqlAlchemySessionRepository(SessionRepository):
     def _active_stmt() -> Select[tuple[SessionModel]]:
         return select(SessionModel).where(SessionModel.deleted_at.is_(None))
 
+    async def update_status(self, session_id: UUID, status: str) -> Session | None:
+        stmt = self._active_stmt().where(SessionModel.id == session_id)
+        result = await self.db_session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        model.status = status
+        model.updated_at = datetime.now(UTC)
+        await self.db_session.flush()
+        await self.db_session.refresh(model)
+        return model.to_entity()
+
+    async def increment_unread(self, session_id: UUID) -> None:
+        stmt = self._active_stmt().where(SessionModel.id == session_id)
+        result = await self.db_session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is not None:
+            model.unread_count += 1
+            model.updated_at = datetime.now(UTC)
+
+    async def clear_unread(self, session_id: UUID) -> Session | None:
+        stmt = self._active_stmt().where(SessionModel.id == session_id)
+        result = await self.db_session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        model.unread_count = 0
+        model.updated_at = datetime.now(UTC)
+        await self.db_session.flush()
+        await self.db_session.refresh(model)
+        return model.to_entity()
+
 
 class SqlAlchemySessionMessageRepository(SessionMessageRepository):
     def __init__(self, db_session: AsyncSession) -> None:

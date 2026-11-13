@@ -7,6 +7,7 @@ from app.domain.sessions.entities import (
     SessionEvent,
     SessionEventType,
     SessionMessage,
+    SessionStatus,
 )
 
 
@@ -23,6 +24,16 @@ class SessionService:
 
         session = await self.uow.sessions.add(title=clean_title)
         await self.uow.commit()
+        return session
+
+    async def get_session(self, session_id: UUID) -> Session:
+        session = await self.uow.sessions.get(session_id)
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
         return session
 
     async def list_sessions(self) -> list[Session]:
@@ -83,6 +94,64 @@ class SessionService:
                 "content": message.content,
             },
         )
+        await self.uow.sessions.increment_unread(session_id)
         await self.uow.sessions.touch(session_id)
         await self.uow.commit()
         return message, event
+
+    async def mark_running(self, session_id: UUID) -> Session:
+        await self.get_session(session_id)
+        session = await self.uow.sessions.update_status(
+            session_id=session_id,
+            status=SessionStatus.running.value,
+        )
+        await self.uow.commit()
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
+        return session
+
+    async def mark_idle(self, session_id: UUID) -> Session:
+        await self.get_session(session_id)
+        session = await self.uow.sessions.update_status(
+            session_id=session_id,
+            status=SessionStatus.idle.value,
+        )
+        await self.uow.commit()
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
+        return session
+
+    async def stop_session(self, session_id: UUID) -> Session:
+        await self.get_session(session_id)
+        session = await self.uow.sessions.update_status(
+            session_id=session_id,
+            status=SessionStatus.stopped.value,
+        )
+        await self.uow.commit()
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
+        return session
+
+    async def clear_unread(self, session_id: UUID) -> Session:
+        await self.get_session(session_id)
+        session = await self.uow.sessions.clear_unread(session_id)
+        await self.uow.commit()
+        if session is None:
+            raise AppException(
+                message="session not found",
+                code=404,
+                status_code=404,
+            )
+        return session

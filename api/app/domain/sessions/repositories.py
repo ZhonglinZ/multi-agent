@@ -24,6 +24,15 @@ class SessionRepository(Protocol):
     async def touch(self, session_id: UUID) -> None:
         raise NotImplementedError
 
+    async def update_status(self, session_id: UUID, status: str) -> Session | None:
+        raise NotImplementedError
+
+    async def increment_unread(self, session_id: UUID) -> None:
+        raise NotImplementedError
+
+    async def clear_unread(self, session_id: UUID) -> Session | None:
+        raise NotImplementedError
+
 
 class SessionMessageRepository(Protocol):
     async def add_user_message(self, session_id: UUID, content: str) -> SessionMessage:

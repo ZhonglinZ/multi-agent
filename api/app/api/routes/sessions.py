@@ -161,9 +161,23 @@ async def stream_message(
     )
     message_data = to_message_response(message).model_dump(mode="json")
     event_data = to_event_response(event).model_dump(mode="json")
+    running_session = await service.mark_running(session_id)
+    message, event = await service.create_user_message(
+        session_id=session_id,
+        content=payload.content,
+    )
+    idle_session = await service.mark_idle(session_id)
+    running_data = to_session_response(running_session).model_dump(mode="json")
+    message_data = to_message_response(message).model_dump(mode="json")
+    event_data = to_event_response(event).model_dump(mode="json")
+    idle_data = to_session_response(idle_session).model_dump(mode="json")
 
     async def event_stream():
+        yield encode_sse("session_status", running_data)
+        await sleep(0.2)
         yield encode_sse("message_created", event_data)
+        await sleep(0.2)
+        yield encode_sse("session_status", idle_data)
         await sleep(0.2)
         yield encode_sse(
             "stream_done",
