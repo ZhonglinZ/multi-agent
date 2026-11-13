@@ -76,6 +76,30 @@ async def delete_session(
     return Response(status_code=204)
 
 
+@router.post(
+    "/{session_id}/read",
+    response_model=ApiResponse[SessionResponse],
+)
+async def clear_unread(
+    session_id: UUID,
+    service: SessionService = Depends(build_session_service),
+) -> ApiResponse[SessionResponse]:
+    session = await service.clear_unread(session_id)
+    return ApiResponse(data=to_session_response(session))
+
+
+@router.post(
+    "/{session_id}/stop",
+    response_model=ApiResponse[SessionResponse],
+)
+async def stop_session(
+    session_id: UUID,
+    service: SessionService = Depends(build_session_service),
+) -> ApiResponse[SessionResponse]:
+    session = await service.stop_session(session_id)
+    return ApiResponse(data=to_session_response(session))
+
+
 @router.get(
     "/{session_id}/messages",
     response_model=ApiResponse[MessageListResponse],
